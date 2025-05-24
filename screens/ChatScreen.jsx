@@ -1,0 +1,198 @@
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Speech from "expo-speech";
+import LottieView from "lottie-react-native";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
+
+const ChatScreen = () => {
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const animationRef = useRef(null);
+
+  useEffect(() => {
+    loadMessages();
+  }, []);
+
+  useEffect(() => {
+    saveMessages();
+  }, [messages]);
+
+  const loadMessages = async () => {
+    const saved = await AsyncStorage.getItem("messages");
+    if (saved) setMessages(JSON.parse(saved));
+  };
+
+  const saveMessages = async () => {
+    await AsyncStorage.setItem("messages", JSON.stringify(messages));
+  };
+
+  const sendMessage = () => {
+    if (!text.trim()) return;
+    const newMessage = { id: Date.now().toString(), text, fromUser: true };
+    setMessages([...messages, newMessage]);
+    setText("");
+    simulateAIResponse(text);
+  };
+
+  const simulateAIResponse = (userText) => {
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiMessage = {
+        id: Date.now().toString(),
+        text: `AI says: ${userText}`,
+        fromUser: false,
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  const speak = () => {
+    Speech.speak("Listening is not yet implemented in Expo", {
+      rate: 1.0,
+    });
+  };
+
+  const renderItem = ({ item }) => (
+    <View
+      style={[
+        styles.message,
+        item.fromUser ? styles.userMsg : styles.aiMsg,
+      ]}
+    >
+      <Text style={styles.messageText}>{item.text}</Text>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Top Bar */}
+      <View style={styles.topBar}>
+        <Text style={styles.topBarText}>AI Assistant</Text>
+        <Ionicons name="chatbubbles-outline" size={24} color="#555" />
+      </View>
+
+      {/* Chat */}
+      <FlatList
+        data={messages}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.chatContainer}
+      />
+
+      {/* Typing Animation */}
+      {isTyping && (
+        <LottieView
+          source={require("../assets/ai-typing-indicator.json")}
+          autoPlay
+          loop
+          style={{ width: 100, height: 50, alignSelf: "flex-start" }}
+          ref={animationRef}
+        />
+      )}
+
+      {/* Input */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.inputContainer}
+      >
+        <TouchableOpacity onPress={speak} style={styles.micBtn}>
+          <AntDesign name="sound" size={20} color="#333" />
+        </TouchableOpacity>
+        <TextInput
+          placeholder="Ask me anything..."
+          placeholderTextColor="#888"
+          value={text}
+          onChangeText={setText}
+          style={styles.input}
+        />
+        <TouchableOpacity onPress={sendMessage} style={styles.sendBtn}>
+          <Text style={{ color: "#fff" }}>Send</Text>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+export default ChatScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F7FA",
+  },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  topBarText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  chatContainer: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  message: {
+    padding: 10,
+    marginVertical: 4,
+    borderRadius: 8,
+    maxWidth: "80%",
+  },
+  userMsg: {
+    backgroundColor: "#DCF8C6",
+    alignSelf: "flex-end",
+  },
+  aiMsg: {
+    backgroundColor: "#eee",
+    alignSelf: "flex-start",
+  },
+  messageText: {
+    color: "#333",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    padding: 10,
+    borderTopColor: "#ccc",
+    borderTopWidth: 1,
+    backgroundColor: "#fff",
+    alignItems: "center",
+  },
+  input: {
+    flex: 1,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    color: "#000",
+    marginHorizontal: 10,
+  },
+  sendBtn: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  micBtn: {
+    backgroundColor: "#eee",
+    padding: 10,
+    borderRadius: 20,
+  },
+});
