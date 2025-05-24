@@ -97,8 +97,21 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => (
-    <MessageBubble text={item.text} fromUser={item.fromUser} />
-  );
+    <MessageBubble
+        text={item.text}
+        fromUser={item.fromUser}
+        onSpeak={
+        !item.fromUser
+            ? () =>
+                Speech.speak(item.text, {
+                rate: 1.0,
+                language: "en",
+                })
+            : undefined
+        }
+    />
+);
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F7FA" }}>
