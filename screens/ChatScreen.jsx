@@ -15,6 +15,12 @@ import * as Speech from "expo-speech";
 import LottieView from "lottie-react-native";
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+// import { GEMINI_API_KEY } from "@env"; 
+import MessageBubble from "../components/MessageBubble";
+// import Constants from "expo-constants";
+
+
 
 const ChatScreen = () => {
   const insets = useSafeAreaInsets();
@@ -22,6 +28,9 @@ const ChatScreen = () => {
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const animationRef = useRef(null);
+  
+// const genAI = new GoogleGenerativeAI(Constants.expoConfig.extra.GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI("AIzaSyDlR5kE0_7lwmE1nWfj9jIeWWysloPIw60");
 
   useEffect(() => {
     loadMessages();
@@ -40,6 +49,11 @@ const ChatScreen = () => {
     await AsyncStorage.setItem("messages", JSON.stringify(messages));
   };
 
+  const clearMessages = async () => {
+  await AsyncStorage.removeItem("messages");
+  setMessages([]);
+};
+
   const sendMessage = () => {
     if (!text.trim()) return;
     const newMessage = { id: Date.now().toString(), text, fromUser: true };
@@ -48,18 +62,33 @@ const ChatScreen = () => {
     simulateAIResponse(text);
   };
 
-  const simulateAIResponse = (userText) => {
+  const simulateAIResponse = async (userText) => {
+  try {
     setIsTyping(true);
-    setTimeout(() => {
-      const aiMessage = {
-        id: Date.now().toString(),
-        text: `AI says: ${userText}`,
-        fromUser: false,
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
-  };
+    
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const result = await model.generateContent(`make concise and clear response on my question: ${userText}`);
+    const response = await result.response;
+    const aiText = response.text();
+
+    const aiMessage = {
+      id: Date.now().toString(),
+      text: aiText || `AI Said: ${userText}`,
+      fromUser: false,
+    };
+    setMessages((prev) => [...prev, aiMessage]);
+  } catch (error) {
+    const errorMessage = {
+      id: Date.now().toString(),
+      text: "Error from AI: " + error.message,
+      fromUser: false,
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+  } finally {
+    setIsTyping(false);
+  }
+};
+
 
   const speak = () => {
     Speech.speak("Listening is not yet implemented in Expo", {
@@ -68,11 +97,7 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => (
-    <View
-      style={[styles.message, item.fromUser ? styles.userMsg : styles.aiMsg]}
-    >
-      <Text style={styles.messageText}>{item.text}</Text>
-    </View>
+    <MessageBubble text={item.text} fromUser={item.fromUser} />
   );
 
   return (
@@ -85,7 +110,12 @@ const ChatScreen = () => {
         {/* Top Bar */}
         <View style={[styles.topBar, { paddingTop: insets.top }]}>
           <Text style={styles.topBarText}>AI Assistant</Text>
-          <Ionicons name="chatbubbles-outline" size={24} color="#555" />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <TouchableOpacity onPress={clearMessages} style={styles.clearBtn}>
+                <Ionicons name="trash-bin-outline" size={22} color="#FF3B30" />
+                </TouchableOpacity>
+                <Ionicons name="chatbubbles-outline" size={24} color="#555" style={{ marginLeft: 12 }} />
+            </View>
         </View>
 
         {/* Chat */}
@@ -156,23 +186,8 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 10,
   },
-  message: {
-    padding: 10,
-    marginVertical: 4,
-    borderRadius: 8,
-    maxWidth: "80%",
-  },
-  userMsg: {
-    backgroundColor: "#DCF8C6",
-    alignSelf: "flex-end",
-  },
-  aiMsg: {
-    backgroundColor: "#eee",
-    alignSelf: "flex-start",
-  },
-  messageText: {
-    color: "#333",
-  },
+  
+
   inputContainer: {
     flexDirection: "row",
     padding: 10,
