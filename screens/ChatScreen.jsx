@@ -14,8 +14,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Speech from "expo-speech";
 import LottieView from "lottie-react-native";
 import { AntDesign, Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ChatScreen = () => {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -67,60 +69,66 @@ const ChatScreen = () => {
 
   const renderItem = ({ item }) => (
     <View
-      style={[
-        styles.message,
-        item.fromUser ? styles.userMsg : styles.aiMsg,
-      ]}
+      style={[styles.message, item.fromUser ? styles.userMsg : styles.aiMsg]}
     >
       <Text style={styles.messageText}>{item.text}</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <Text style={styles.topBarText}>AI Assistant</Text>
-        <Ionicons name="chatbubbles-outline" size={24} color="#555" />
-      </View>
-
-      {/* Chat */}
-      <FlatList
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.chatContainer}
-      />
-
-      {/* Typing Animation */}
-      {isTyping && (
-        <LottieView
-          source={require("../assets/ai-typing-indicator.json")}
-          autoPlay
-          loop
-          style={{ width: 100, height: 50, alignSelf: "flex-start" }}
-          ref={animationRef}
-        />
-      )}
-
-      {/* Input */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F5F7FA" }}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.inputContainer}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "android" ? 15 : 0}
       >
-        <TouchableOpacity onPress={speak} style={styles.micBtn}>
-          <AntDesign name="sound" size={20} color="#333" />
-        </TouchableOpacity>
-        <TextInput
-          placeholder="Ask me anything..."
-          placeholderTextColor="#888"
-          value={text}
-          onChangeText={setText}
-          style={styles.input}
+        {/* Top Bar */}
+        <View style={[styles.topBar, { paddingTop: insets.top }]}>
+          <Text style={styles.topBarText}>AI Assistant</Text>
+          <Ionicons name="chatbubbles-outline" size={24} color="#555" />
+        </View>
+
+        {/* Chat */}
+        <FlatList
+          data={messages}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.chatContainer}
+          keyboardShouldPersistTaps="handled"
         />
-        <TouchableOpacity onPress={sendMessage} style={styles.sendBtn}>
-          <Text style={{ color: "#fff" }}>Send</Text>
-        </TouchableOpacity>
+
+        {/* Typing Animation */}
+        {isTyping && (
+          <LottieView
+            source={require("../assets/ai-typing-indicator.json")}
+            autoPlay
+            loop
+            style={{
+              width: 100,
+              height: 50,
+              alignSelf: "flex-start",
+              marginLeft: 16,
+            }}
+            ref={animationRef}
+          />
+        )}
+
+        {/* Input Area */}
+        <View style={styles.inputContainer}>
+          <TouchableOpacity onPress={speak} style={styles.micBtn}>
+            <AntDesign name="sound" size={20} color="#333" />
+          </TouchableOpacity>
+          <TextInput
+            placeholder="Ask me anything..."
+            placeholderTextColor="#888"
+            value={text}
+            onChangeText={setText}
+            style={styles.input}
+          />
+          <TouchableOpacity onPress={sendMessage} style={styles.sendBtn}>
+            <Text style={{ color: "#fff" }}>Send</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -129,15 +137,12 @@ const ChatScreen = () => {
 export default ChatScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
@@ -149,7 +154,7 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 10,
   },
   message: {
     padding: 10,
